@@ -1,0 +1,104 @@
+create database demo
+
+CREATE TABLE accounts (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    role VARCHAR(50) NOT NULL,
+    fio VARCHAR(100) NOT NULL,
+    login VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    photo_path VARCHAR(255)
+);
+
+insert into accounts(role, fio, login, password, photo_path)
+VALUES
+    ('Продавец', 'Иванов Иван Иванович', 'Ivanov@namecomp.ru', '2L6KZG', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Продавец', 'Петров Петр Петрович', 'petrov@namecomp.ru', 'uzWC67', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Администратор', 'Федоров Федор Федорович', 'fedorov@namecomp.ru', '8ntwUp', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Старший смены', 'Миронов Вениамин Куприянович', 'mironov@namecomp.ru', 'YOyhfR', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Старший смены', 'Ширяев Ермолай Вениаминович', 'shiryev@namecomp.ru', 'RSbvHv', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Старший смены', 'Игнатов Кассиан Васильевич', 'ignatov@namecomp.ru', 'rwVDh9', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Продавец', 'Хохлов Владимир Мэлсович', 'hohlov@namecomp.ru', 'LdNyos', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Продавец', 'Стрелков Мстислав Георгьевич', 'strelkov@namecomp.ru', 'gynQMT', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Продавец', 'Беляева Лилия Наумовна', 'belyeva@namecomp.ru', 'AtnDjr', 'G:\Анапа 2023\Ширяев.jpeg'),
+    ('Продавец', 'Смирнова Ульяна Гордеевна', 'smirnova@namecomp.ru', 'JlFRCZ', 'G:\Анапа 2023\Ширяев.jpeg');
+select * from accounts;
+
+
+from tkinter import *
+from tkinter import messagebox, ttk
+import pyodbc as py
+
+def closeWindow(window):
+    window.destroy()
+
+def show_table(data):
+    # Создаем новое окно для отображения таблицы
+    table_window = Tk()
+    table_window.title("Таблица данных")
+
+    tree = ttk.Treeview(table_window)
+    tree.pack(expand=True, fill='both')
+
+    # Определяем столбцы
+    columns = [desc[0] for desc in data.description]
+    tree["columns"] = columns
+    tree["show"] = "headings"
+
+    for col in columns:
+        tree.heading(col, text=col)
+
+    for row in data.fetchall():
+        tree.insert("", "end", values=row)
+
+    table_window.mainloop()
+
+def auth():
+    try:
+        connectionStr = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=DESKTOP-AOBP6SG\SQLEXPRESS;DATABASE=demo;Trusted_Connection=yes'
+        connection = py.connect(connectionStr, autocommit=True)
+        dbCursor = connection.cursor()
+        username = username_entry.get()
+        password = password_entry.get()
+        dbCursor.execute("SELECT * FROM accounts WHERE login=? AND password=?", (username, password))
+        user = dbCursor.fetchone()
+
+        if user:
+            role = user[1]  # Изменение индекса для соответствия структуре таблицы accounts
+            if role in ['Продавец', 'Администратор', 'Старший смены']:
+                print("Добро пожаловать, {}!".format(username))
+                closeWindow(window)
+
+                # Запрос данных для таблицы
+                dbCursor.execute("SELECT * FROM accounts")
+                data = dbCursor
+
+                # Показать таблицу данных
+                show_table(data)
+            else:
+                messagebox.showerror("Ошибка", "Неизвестная роль пользователя")
+        else:
+            messagebox.showerror("Ошибка", "Данные не найдены")
+    except py.Error as e:
+        print("Error during authentication:", e)
+    finally:
+        if dbCursor is not None:
+            dbCursor.close()
+        if connection is not None:
+            connection.close()
+
+# Основное окно для авторизации
+window = Tk()
+window.title("Авторизация")
+window.geometry("300x200")
+
+Label(window, text="Логин").pack(pady=5)
+username_entry = Entry(window)
+username_entry.pack(pady=5)
+
+Label(window, text="Пароль").pack(pady=5)
+password_entry = Entry(window, show="*")
+password_entry.pack(pady=5)
+
+Button(window, text="Войти", command=auth).pack(pady=20)
+
+window.mainloop()
